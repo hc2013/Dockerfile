@@ -1,0 +1,61 @@
+FROM klokantech/tileserver-gl
+
+MAINTAINER Han Chun <281427157@qq.com>
+
+
+
+RUN mkdir -p /usr/software/jdk1.8.0_191 
+COPY jdk1.8.0_191 /usr/software/jdk1.8.0_191
+RUN echo 'export JAVA_HOME=/usr/software/jdk1.8.0_191'>> /etc/profile \
+    && echo 'export PATH=$JAVA_HOME/bin:$PATH' >> /etc/profile \
+    && echo 'export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar' >> /etc/profile \
+    && echo 'export JAVA_HOME=/usr/software/jdk1.8.0_191'>> /root/.bashrc \
+    && echo 'export PATH=$JAVA_HOME/bin:$PATH' >> /root/.bashrc \
+    && echo 'export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar' >> /root/.bashrc \
+    && /bin/bash -c "source /etc/profile" \
+    && echo $JAVA_HOME 
+ 
+
+RUN wget -q -O /tmp/libpng12.deb http://mirrors.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1_amd64.deb \
+  && dpkg -i /tmp/libpng12.deb \
+  && rm /tmp/libpng12.deb && apt-get clean
+
+COPY tuna_sources /etc/apt
+
+#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5
+#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32
+
+RUN cat /etc/apt/tuna_sources >> /etc/apt/sources.list
+
+RUN apt-get update \
+   &&apt-get -y --allow-unauthenticated install libgif4 \
+   &&apt-get -y --allow-unauthenticated install libgles2-mesa-dev 
+
+RUN mkdir -p /root/.m2
+COPY repository /root/.m2/repository
+
+
+RUN rm -rf /usr/src/app/node_modules && mkdir /usr/src/app/node_modules
+COPY node_modules /usr/src/app/node_modules
+COPY package.json /usr/src/app
+
+
+RUN cd /usr/src/app \
+  && /bin/bash -c "source /etc/profile \
+  && npm install java"
+
+RUN rm -rf /usr/src/app/src && mkdir /usr/src/app/src
+COPY src /usr/src/app/src
+
+COPY hbase-site.xml /usr/src/app
+
+COPY run.sh /usr/src/app
+
+RUN cp /etc/hosts /tmp/hosts
+RUN mkdir -p -- /lib-override && cp /lib/x86_64-linux-gnu/libnss_files.so.2 /lib-override
+RUN sed -i 's:/etc/hosts:/tmp/hosts:g' /lib-override/libnss_files.so.2
+ENV LD_LIBRARY_PATH /lib-override
+RUN ln -s /tmp/hosts /data/hosts
+
+RUN rm -rf /usr/src/app/public && mkdir /usr/src/app/public
+COPY /public /usr/src/app/public
