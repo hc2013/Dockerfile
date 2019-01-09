@@ -2,8 +2,6 @@ FROM klokantech/tileserver-gl
 
 MAINTAINER Han Chun <281427157@qq.com>
 
-
-
 RUN mkdir -p /usr/software/jdk1.8.0_191 
 COPY jdk1.8.0_191 /usr/software/jdk1.8.0_191
 RUN echo 'export JAVA_HOME=/usr/software/jdk1.8.0_191'>> /etc/profile \
@@ -44,8 +42,9 @@ RUN cd /usr/src/app \
   && /bin/bash -c "source /etc/profile \
   && npm install java"
 
-RUN rm -rf /usr/src/app/src && mkdir /usr/src/app/src
+RUN rm -rf /usr/src/app/src && mkdir /usr/src/app/src && mkdir /usr/src/app/uploads
 COPY src /usr/src/app/src
+COPY page /usr/src/app/page
 
 COPY hbase-site.xml /usr/src/app
 
@@ -59,3 +58,5 @@ RUN ln -s /tmp/hosts /data/hosts
 
 RUN rm -rf /usr/src/app/public && mkdir /usr/src/app/public
 COPY /public /usr/src/app/public
+
+ENTRYPOINT ["/bin/bash","/data/run.sh"]
